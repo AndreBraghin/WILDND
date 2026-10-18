@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>World Tree Barbarian</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout concept: a field-journal sheet. Header with level stepper, vitals strip, then a two-column body (abilities + skills | features) that stacks on phones; a fixed roll dock sits at the bottom. */
+:root{
+  --bg:#EEF1EC; --panel:#F8FAF6; --ink:#18302B; --muted:#5B6F68; --line:#CBD5CD;
+  --accent:#23705A; --accent-ink:#FFFFFF; --rage:#B23A2A; --gold:#8A5F10; --soft:#E3E9E2;
+  --font-display:"Alegreya SC", Georgia, "Times New Roman", serif;
+  --font-body:"Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1715; --panel:#15231F; --ink:#E3EDE7; --muted:#97ADA4; --line:#2A3D37;
+    --accent:#62C4A0; --accent-ink:#0C1613; --rage:#E8705A; --gold:#D9A84B; --soft:#1C2E28;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1715; --panel:#15231F; --ink:#E3EDE7; --muted:#97ADA4; --line:#2A3D37;
+  --accent:#62C4A0; --accent-ink:#0C1613; --rage:#E8705A; --gold:#D9A84B; --soft:#1C2E28;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:15px; line-height:1.5;
+  padding-block:20px 120px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;margin:0;text-wrap:balance}
+h2{font-size:1.05rem;letter-spacing:.06em;color:var(--accent);margin-bottom:10px}
+h3{font-size:1rem;letter-spacing:.03em}
+.num{font-variant-numeric:tabular-nums lining-nums;font-family:var(--font-body)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.pill{display:inline-block;border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:2px 10px;font-size:.8rem;color:var(--muted)}
+
+/* header */
+.head{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between}
+.head-main{min-width:0;flex:1 1 320px;display:flex;flex-direction:column;gap:6px}
+.name{font-family:var(--font-display);font-weight:700;font-size:clamp(1.6rem,5vw,2.4rem);background:transparent;border:0;border-bottom:1px dashed var(--line);padding:2px 0;width:100%;color:var(--ink)}
+.name::placeholder{color:var(--muted);font-weight:500}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.lvl{display:flex;align-items:center;gap:10px}
+.lvl-box{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel)}
+.lvl-box button{border:0;background:transparent;width:44px;height:44px;font-size:1.3rem}
+.lvl-box button:hover:not(:disabled){background:var(--soft)}
+.lvl-box button:disabled{opacity:.35;cursor:default}
+.lvl-val{min-width:84px;text-align:center;line-height:1.1}
+.lvl-val b{display:block;font-size:1.6rem}
+.lvl-val span{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.save-state{font-size:.78rem;color:var(--muted)}
+
+/* vitals */
+.vitals{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{border:1px solid var(--line);border-radius:6px;padding:8px 6px;text-align:center;background:var(--bg);min-width:0;display:flex;flex-direction:column;gap:2px;align-items:center}
+.stat .v{font-size:1.7rem;font-weight:700;line-height:1.1}
+.stat .l{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat button.v{background:none;border:0;padding:0}
+.hp-big{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.hp-big .cur{font-size:2.6rem;font-weight:700;line-height:1}
+.hp-big .max{font-size:1.2rem;color:var(--muted)}
+.bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;background:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:8px 12px;min-height:40px}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.rage{background:var(--rage);color:#fff;border-color:var(--rage);font-weight:600}
+.btn.sm{padding:4px 10px;min-height:32px;font-size:.85rem}
+input[type=number],input[type=text],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0}
+input[type=number]{width:88px}
+.pips{display:flex;gap:8px;flex-wrap:wrap}
+.pip{width:28px;height:28px;border-radius:50%;border:2px solid var(--rage);background:var(--rage);padding:0}
+.pip.used{background:transparent}
+.rage-panel.on{border-color:var(--rage);box-shadow:inset 0 0 0 1px var(--rage)}
+.rage-state{font-weight:700;color:var(--rage)}
+.kv{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dotted var(--line);padding:4px 0}
+.kv:last-child{border-bottom:0}
+
+/* body columns */
+.cols{display:grid;gap:16px;grid-template-columns:minmax(0,5fr) minmax(0,6fr);align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.abil{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:420px){.abil{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ab{border:1px solid var(--line);border-radius:6px;padding:8px;background:var(--bg);display:flex;flex-direction:column;gap:4px;align-items:center;min-width:0}
+.ab .n{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ab .m{font-size:1.9rem;font-weight:700;line-height:1;background:none;border:0;padding:2px 6px;border-radius:4px}
+.ab .m:hover{background:var(--soft)}
+.ab .s{font-size:.9rem;color:var(--muted)}
+.ab .sv{font-size:.82rem;background:none;border:1px solid var(--line);border-radius:99px;padding:2px 8px;display:flex;gap:6px;align-items:center}
+.ab .sv:hover{border-color:var(--accent)}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted);display:inline-block;flex:none}
+.dot.p{background:var(--accent);border-color:var(--accent)}
+.skills{display:flex;flex-direction:column}
+.sk{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;background:none;border:0;border-bottom:1px dotted var(--line);padding:6px 4px;text-align:left;width:100%}
+.sk:hover{background:var(--soft)}
+.sk .a{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.sk .b{font-weight:700}
+.passives{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+/* features */
+.feat{border-bottom:1px solid var(--line)}
+.feat:last-child{border-bottom:0}
+.feat summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;padding:8px 2px;list-style:none}
+.feat summary::-webkit-details-marker{display:none}
+.feat summary::before{content:"+";color:var(--accent);font-weight:700;width:12px;flex:none}
+.feat[open] summary::before{content:"\2212"}
+.feat .lv{margin-left:auto;font-size:.75rem;color:var(--muted);white-space:nowrap}
+.feat .body{padding:0 2px 12px 22px;color:var(--ink)}
+.feat.locked{opacity:.5}
+.feat.new summary b{color:var(--accent)}
+.group-title{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px}
+.group-title:first-child{margin-top:0}
+.choice{border:1px dashed var(--line);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-top:8px;background:var(--bg)}
+.choice.pending{border-color:var(--gold)}
+.choice .t{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.flag{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);font-weight:700}
+.flag.done{color:var(--accent)}
+.sel-row{display:flex;gap:8px;flex-wrap:wrap}
+.sel-row select,.sel-row input{flex:1 1 140px}
+.mastery{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+textarea{width:100%;min-height:110px;resize:vertical}
+.spell{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:8px 0;border-bottom:1px dotted var(--line)}
+.spell:last-child{border-bottom:0}
+.spell.locked{opacity:.45}
+.spell .t b{font-weight:700}
+.notice{background:var(--soft);border-left:3px solid var(--gold);padding:8px 12px;border-radius:0 6px 6px 0;margin-bottom:10px;font-size:.9rem}
+.notice.rage{border-left-color:var(--rage)}
+
+/* roll dock */
+.dock{
+  position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);
+  padding-top:8px;
+  padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px));
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+.dock-in{max-width:1120px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:var(--bg);padding:6px 12px;min-height:36px}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.last{display:flex;gap:10px;align-items:baseline;min-width:0;flex-wrap:wrap}
+.last .tot{font-size:1.8rem;font-weight:700;line-height:1}
+.last .det{font-size:.85rem;color:var(--muted)}
+.last.crit .tot{color:var(--accent)}
+.last.fail .tot{color:var(--rage)}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .25s}}
+</style>
+
+<div class="wrap" id="app"></div>
+<div class="dock" role="region" aria-label="Dice roller">
+  <div class="dock-in">
+    <div class="seg" role="group" aria-label="Roll mode">
+      <button type="button" data-act="mode" data-v="dis" aria-pressed="false">Disadv.</button>
+      <button type="button" data-act="mode" data-v="normal" aria-pressed="true">Normal</button>
+      <button type="button" data-act="mode" data-v="adv" aria-pressed="false">Adv.</button>
+    </div>
+    <div class="last" id="last" aria-live="polite"><span class="muted small">Tap any modifier, skill or save to roll a d20.</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- Static rules data (2024 Player's Handbook) ---------- */
+var ABIL=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"]];
+var BASE={str:15,dex:14,con:16,int:8,wis:12,cha:10}; // Standard Array 15,14,13,12,10,8 + Guide (+2 Con, +1 Dex)
+var SKILLS=[
+ ["acrobatics","Acrobatics","dex"],["animal","Animal Handling","wis"],["arcana","Arcana","int"],["athletics","Athletics","str"],
+ ["deception","Deception","cha"],["history","History","int"],["insight","Insight","wis"],["intimidation","Intimidation","cha"],
+ ["investigation","Investigation","int"],["medicine","Medicine","wis"],["nature","Nature","int"],["perception","Perception","wis"],
+ ["performance","Performance","cha"],["persuasion","Persuasion","cha"],["religion","Religion","int"],["sleight","Sleight of Hand","dex"],
+ ["stealth","Stealth","dex"],["survival","Survival","wis"]
+];
+var BASE_PROF={athletics:"Barbarian",perception:"Barbarian",insight:"Keen Senses",stealth:"Guide",survival:"Guide"};
+var BARB_SKILLS=["animal","athletics","intimidation","nature","perception","survival"];
+var RAGE_STR_SKILLS=["acrobatics","intimidation","perception","stealth","survival"]; // Primal Knowledge
+var PB=[2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6];
+var RAGES=[2,2,3,3,3,4,4,4,4,4,4,5,5,5,5,5,6,6,6,6];
+function rdmg(l){return l<9?2:(l<16?3:4);}
+function masteryN(l){return l<4?2:(l<10?3:4);}
+var ASI_LEVELS=[4,8,12,16];
+
+var CLASS_FEATS=[
+ {l:1,n:"Rage",t:function(c){return "Bonus Action, not in Heavy armor. While raging: resistance to bludgeoning, piercing and slashing damage; +"+c.rd+" damage on Strength-based hits; advantage on Strength checks and saves; no spellcasting or Concentration. Lasts until the end of your next turn, and extends if you attack, force a save, or spend a Bonus Action. Maximum 10 minutes. You regain one use on a Short Rest and all uses on a Long Rest.";}},
+ {l:1,n:"Unarmored Defense",t:function(){return "With no armor, AC = 10 + Dexterity modifier + Constitution modifier. A shield still adds its bonus.";}},
+ {l:1,n:"Weapon Mastery",t:function(c){return "Use the mastery property of "+c.mn+" kinds of Simple or Martial melee weapons you choose. After a Long Rest you can swap one of them.";}},
+ {l:2,n:"Danger Sense",t:function(){return "Advantage on Dexterity saving throws unless you are Incapacitated.";}},
+ {l:2,n:"Reckless Attack",t:function(){return "On your first attack roll of a turn you may attack recklessly: advantage on Strength-based attack rolls until the start of your next turn, but attack rolls against you have advantage too.";}},
+ {l:3,n:"Barbarian Subclass: Path of the World Tree",t:function(){return "Your subclass features arrive at levels 3, 6, 10 and 14 (listed below).";}},
+ {l:3,n:"Primal Knowledge",t:function(){return "Gain one more Barbarian skill proficiency (see Choices). While raging, you can use Strength for Acrobatics, Intimidation, Perception, Stealth and Survival checks.";}},
+ {l:4,n:"Ability Score Improvement",t:function(){return "Raise ability scores or take a feat (see Choices). Also at levels 8, 12 and 16.";}},
+ {l:5,n:"Extra Attack",t:function(){return "Attack twice when you take the Attack action.";}},
+ {l:5,n:"Fast Movement",t:function(){return "Speed +10 ft while you are not wearing Heavy armor.";}},
+ {l:7,n:"Feral Instinct",t:function(){return "Advantage on Initiative rolls.";}},
+ {l:7,n:"Instinctive Pounce",t:function(){return "As part of the Bonus Action that starts your Rage, move up to half your Speed.";}},
+ {l:9,n:"Brutal Strike",t:function(){return "When you use Reckless Attack you can give up the advantage on one Strength attack. On a hit it deals +1d10 damage of the weapon's type and you choose Forceful Blow (push 15 ft, then move up to half your Speed toward the target without provoking) or Hamstring Blow (target Speed -15 ft until the start of your next turn).";}},
+ {l:11,n:"Relentless Rage",t:function(){return "If you drop to 0 HP while raging and don't die outright, make a DC 10 Constitution save. On a success your HP becomes twice your Barbarian level. Each later use before a rest raises the DC by 5.";}},
+ {l:13,n:"Improved Brutal Strike",t:function(){return "Two new Brutal Strike effects: Staggering Blow (target has disadvantage on its next save and can't make Opportunity Attacks until the start of your next turn) and Sundering Blow (the next attack roll by another creature against the target gets +5).";}},
+ {l:15,n:"Persistent Rage",t:function(){return "Once per Long Rest, regain all expended Rage uses when you roll Initiative. Your Rage lasts the full 10 minutes without needing to be extended, and ends early only if you become Unconscious or put on Heavy armor.";}},
+ {l:17,n:"Improved Brutal Strike (2)",t:function(){return "Brutal Strike extra damage becomes 2d10, and you can apply two different Brutal Strike effects.";}},
+ {l:18,n:"Indomitable Might",t:function(){return "If your total on a Strength check or Strength save is lower than your Strength score, you can use the score instead.";}},
+ {l:19,n:"Epic Boon",t:function(){return "Gain an Epic Boon feat of your choice (see Choices).";}},
+ {l:20,n:"Primal Champion",t:function(){return "Strength and Constitution each increase by 4, to a maximum of 25.";}}
+];
+var TREE_FEATS=[
+ {l:3,n:"Vitality of the Tree",t:function(c){return "Vitality Surge: when you start a Rage, gain temporary HP equal to your Barbarian level ("+c.lvl+"). Life-Giving Force: at the start of each of your turns while raging, choose a creature within 10 ft and give it temporary HP equal to "+c.rd+"d6 (they vanish when the Rage ends).";}},
+ {l:6,n:"Branches of the Tree",t:function(c){return "While raging, when a creature you can see starts its turn within 30 ft, use your Reaction: it makes a Strength save (DC "+c.branchDC+"). On a failure it is teleported to an unoccupied space you can see within 5 ft of you, and you can reduce its Speed to 0 until the end of that turn.";}},
+ {l:10,n:"Battering Roots",t:function(){return "On your turn, your reach with Heavy or Versatile melee weapons is 10 ft greater. When you hit with one on your turn, you can use the Push or Topple mastery property in addition to the weapon's other mastery property.";}},
+ {l:14,n:"Travel along the Tree",t:function(){return "When you start a Rage, and as a Bonus Action while raging, teleport up to 60 ft to an unoccupied space you can see. Once per Rage you can extend this to 150 ft and bring up to six willing creatures within 10 ft of you, each landing within 10 ft of your destination.";}}
+];
+var HEIR=[
+ {l:1,n:"Dormant",t:function(){return "A skein of roots wound tight around something heavy. It swings like a Greataxe and does nothing else. No magic yet.";}},
+ {l:3,n:"Roots Stir",t:function(){return "The roots loosen and creak. The weapon is magical: it overcomes resistance to nonmagical damage.";}},
+ {l:5,n:"Heartwood",t:function(){return "+1 to attack rolls and damage rolls with the weapon.";}},
+ {l:7,n:"Weeping Sap",t:function(c){return "Once per Long Rest, as a Bonus Action, touch yourself or an adjacent ally: that creature regains HP equal to your Barbarian level + Constitution modifier ("+(c.lvl+c.m.con)+").";}},
+ {l:9,n:"Splintering Strike",t:function(){return "Once per Rage, when you hit with the weapon, deal an extra 2d6 force damage.";}},
+ {l:13,n:"Deep Roots",t:function(){return "The bonus becomes +2, and Weeping Sap also recharges on a Short Rest.";}},
+ {l:17,n:"Unbound",t:function(){return "The roots unwind completely. Final powers are set with the DM.";}}
+];
+var SPELLS=[
+ {k:"presti",n:"Prestidigitation",tag:"Cantrip · High Elf",l:1,use:false,t:"Minor magic tricks: a harmless sensory effect, light or snuff a small flame, clean or soil an object, chill, warm or flavor, a small mark, or a trinket or illusion for an hour. After a Long Rest you may swap it for another Wizard cantrip."},
+ {k:"guidance",n:"Guidance",tag:"Cantrip · Magic Initiate (Druid)",l:1,use:false,t:"Touch, Concentration up to 1 minute. The target adds 1d4 to one ability check of its choice."},
+ {k:"thunderclap",n:"Thunderclap",tag:"Cantrip · Magic Initiate (Druid)",l:1,use:false,t:"Creatures within 5 ft of you make a Constitution save or take 1d6 thunder damage. The sound carries 100 ft."},
+ {k:"healingword",n:"Healing Word",tag:"1st level · Magic Initiate, 1 per Long Rest",l:1,use:true,t:"Bonus Action, 60 ft. A creature you can see regains 2d4 + your spellcasting modifier HP."},
+ {k:"detectmagic",n:"Detect Magic",tag:"High Elf · from level 3, 1 per Long Rest",l:3,use:true,t:"Concentration up to 10 minutes. You sense magic within 30 ft of you."},
+ {k:"mistystep",n:"Misty Step",tag:"High Elf · from level 5, 1 per Long Rest",l:5,use:true,t:"Bonus Action. Teleport up to 30 ft to an unoccupied space you can see."}
+];
+
+/* ---------- State ---------- */
+var DEFAULT_EQUIP="Root-bound skein (Greataxe stats, see Heirloom)\nOwl pendant of the Order of the Vesper Owls\nEmpty flask\nWorn traveling clothes\n0 GP";
+function defaults(){return {v:1,name:"Raica",level:1,hp:null,temp:0,rageUsed:0,raging:false,hdUsed:0,relentless:0,persistentUsed:false,shield:false,
+  extraSkill:"",asi:{},epicBoon:"",mastery:["Greataxe","","",""],equipment:DEFAULT_EQUIP,notes:"",spellUsed:{},rollMode:"normal"};}
+var S=defaults();
+var statusText="Loading…";
+var lastRoll=null;
+
+/* ---------- Derived values ---------- */
+function mod(n){return Math.floor((n-10)/2);}
+function sg(n){return (n>=0?"+":"−")+Math.abs(n);}
+function esc(x){return String(x==null?"":x).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});}
+function scores(){
+  var sc={str:BASE.str,dex:BASE.dex,con:BASE.con,int:BASE.int,wis:BASE.wis,cha:BASE.cha};
+  ASI_LEVELS.forEach(function(L){
+    if(S.level<L) return;
+    var c=S.asi[L]; if(!c) return;
+    if(c.mode==="plus2"&&c.a) sc[c.a]=Math.min(20,sc[c.a]+2);
+    if(c.mode==="plus1"){ var seen={}; [c.a,c.b].forEach(function(k){ if(k&&!seen[k]){seen[k]=1; sc[k]=Math.min(20,sc[k]+1);} }); }
+  });
+  if(S.level>=20){sc.str=Math.min(25,sc.str+4);sc.con=Math.min(25,sc.con+4);}
+  return sc;
+}
+function ctx(){
+  var sc=scores(), m={}; ABIL.forEach(function(a){m[a[0]]=mod(sc[a[0]]);});
+  var pb=PB[S.level-1];
+  var hpMax=12+m.con+(S.level-1)*(7+m.con);
+  var ac=10+m.dex+m.con+(S.shield?2:0);
+  return {sc:sc,m:m,pb:pb,lvl:S.level,rd:rdmg(S.level),mn:masteryN(S.level),hpMax:Math.max(1,hpMax),ac:ac,
+    speed:30+(S.level>=5?10:0),rageMax:RAGES[S.level-1],branchDC:8+m.str+pb,spellMod:m.wis};
+}
+function skillProfs(){var p={};Object.keys(BASE_PROF).forEach(function(k){p[k]=BASE_PROF[k];});if(S.level>=3&&S.extraSkill)p[S.extraSkill]="Primal Knowledge";return p;}
+function curHp(c){return S.hp==null?c.hpMax:Math.min(S.hp,c.hpMax);}
+
+/* ---------- Persistence ---------- */
+var db=null, docRef=null, saving=false, dirty=false, timer=null, loaded=false;
+function plain(){var o=JSON.parse(JSON.stringify(S));return o;}
+function merge(d){
+  var base=defaults(), k;
+  for(k in base){ if(d&&d[k]!==undefined) base[k]=d[k]; }
+  base.level=Math.min(20,Math.max(1,parseInt(base.level,10)||1));
+  if(!base.name) base.name="Raica";
+  if(!base.equipment) base.equipment=DEFAULT_EQUIP;
+  if(!Array.isArray(base.mastery)) base.mastery=["","","",""];
+  while(base.mastery.length<4) base.mastery.push("");
+  if(!base.asi||typeof base.asi!=="object") base.asi={};
+  if(!base.spellUsed||typeof base.spellUsed!=="object") base.spellUsed={};
+  return base;
+}
+function setStatus(t){statusText=t;var el=document.getElementById("saveState");if(el)el.textContent=t;}
+function scheduleSave(){
+  dirty=true; setStatus("Saving…");
+  clearTimeout(timer); timer=setTimeout(flush,600);
+}
+async function flush(){
+  if(saving){timer=setTimeout(flush,300);return;}
+  saving=true; var snapshot=plain();
+  try{
+    if(docRef){ await docRef.set(snapshot); setStatus("Saved to this artifact"); }
+    else { try{localStorage.setItem("wtb-sheet",JSON.stringify(snapshot));setStatus("Saved in this browser only");}catch(e){setStatus("Not saved (storage unavailable)");} }
+    dirty=false;
+  }catch(e){ setStatus("Could not save. Changes stay on screen."); }
+  saving=false;
+}
+async function boot(){
+  render();
+  try{ db=await window.claude.use("db"); }catch(e){ db=null; }
+  if(db){
+    docRef=db.doc("sheet/main");
+    docRef.onSnapshot(function(snap){
+      if(!loaded){
+        loaded=true;
+        if(snap.exists){ S=merge(snap.data()); }
+        setStatus(snap.exists?"Saved to this artifact":"Ready. Changes save automatically");
+        render();
+      } else if(snap.exists && !dirty && !saving && !snap.metadata.hasPendingWrites){
+        var incoming=merge(snap.data());
+        if(JSON.stringify(incoming)!==JSON.stringify(S)){ S=incoming; render(); }
+      }
+    },function(){ setStatus("Live sync stopped. Reload to reconnect."); });
+  } else {
+    try{ var raw=localStorage.getItem("wtb-sheet"); if(raw) S=merge(JSON.parse(raw)); }catch(e){}
+    loaded=true; setStatus("Saved in this browser only"); render();
+  }
+}
+
+/* ---------- Rolling ---------- */
+function d(n){return 1+Math.floor(Math.random()*n);}
+function roll(label,bonus,autoAdv,autoNote){
+  var adv=(S.rollMode==="adv")||autoAdv, dis=(S.rollMode==="dis");
+  var mode=(adv&&dis)?"normal":(adv?"adv":(dis?"dis":"normal"));
+  var a=d(20), b=d(20), used=a;
+  if(mode==="adv") used=Math.max(a,b); else if(mode==="dis") used=Math.min(a,b);
+  lastRoll={label:label,bonus:bonus,a:a,b:b,used:used,mode:mode,total:used+bonus,note:autoNote||""};
+  updateDock();
+}
+function rollDice(label,n,sides,flat){
+  var parts=[],sum=0,i;
+  for(i=0;i<n;i++){var r=d(sides);parts.push(r);sum+=r;}
+  lastRoll={label:label,mode:"dmg",total:sum+flat,detail:n+"d"+sides+" ("+parts.join(" + ")+") "+(flat?sg(flat):"")+(flat?"":"+0"),used:0,a:0,b:0,bonus:flat,note:""};
+  updateDock();
+}
+function healRoll(c){
+  var r=d(12), tot=Math.max(0,r+c.m.con);
+  lastRoll={label:"Hit Die (d12 + Con)",bonus:c.m.con,a:r,b:0,used:r,mode:"hd",total:tot,note:"HP recovered"};
+  updateDock();return tot;
+}
+function updateDock(){
+  var el=document.getElementById("last"); if(!el) return;
+  var seg=document.querySelectorAll('.dock [data-act="mode"]');
+  seg.forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===S.rollMode?"true":"false");});
+  if(!lastRoll){return;}
+  var r=lastRoll, cls="last";
+  if(r.mode!=="hd"&&r.mode!=="dmg"){ if(r.used===20) cls+=" crit"; else if(r.used===1) cls+=" fail"; }
+  var det;
+  if(r.mode==="dmg") det=r.label+": "+r.detail+" · double the dice on a critical hit";
+  else if(r.mode==="hd") det=r.label+": d12 "+r.a+" "+sg(r.bonus)+" → "+r.note;
+  else {
+    det=r.label+": d20 "+(r.mode==="normal"?r.used:(r.mode==="adv"?"advantage ":"disadvantage ")+"("+r.a+", "+r.b+") → "+r.used)+" "+sg(r.bonus);
+    if(r.note) det+=" · "+r.note;
+    if(r.used===20) det+=" · natural 20"; else if(r.used===1) det+=" · natural 1";
+  }
+  el.className=cls;
+  el.innerHTML='<span class="tot num">'+r.total+'</span><span class="det">'+esc(det)+'</span>';
+}
+
+/* ---------- Render ---------- */
+function render(){
+  var c=ctx(), hp=curHp(c), pct=Math.round(100*hp/c.hpMax);
+  var rageLeft=c.rageMax-Math.min(S.rageUsed,c.rageMax);
+  var h="";
+
+  /* header */
+  h+='<header class="head"><div class="head-main">'
+   +'<input class="name" id="f-name" type="text" data-field="name" placeholder="Character name" value="'+esc(S.name)+'" aria-label="Character name">'
+   +'<div class="tags"><span class="pill">Barbarian '+S.level+'</span><span class="pill">Elf · High Elf</span><span class="pill">Guide</span><span class="pill">Chaotic Good</span>'
+   +'<span class="pill">'+(S.level>=3?"Path of the World Tree":"Path of the World Tree at level 3")+'</span></div>'
+   +'<div class="save-state" id="saveState">'+esc(statusText)+'</div></div>'
+   +'<div class="lvl"><div class="lvl-box"><button type="button" data-act="lvl" data-v="-1" aria-label="Lower level"'+(S.level<=1?" disabled":"")+'>−</button>'
+   +'<div class="lvl-val"><b class="num">'+S.level+'</b><span>Level</span></div>'
+   +'<button type="button" data-act="lvl" data-v="1" aria-label="Raise level"'+(S.level>=20?" disabled":"")+'>+</button></div></div></header>';
+
+  /* vitals */
+  h+='<section class="vitals">';
+  h+='<div class="panel"><h2>Defense</h2><div class="stat-row">'
+   +'<div class="stat"><span class="v num">'+c.ac+'</span><span class="l">AC</span></div>'
+   +'<div class="stat"><button class="v num" type="button" data-act="roll" data-label="Initiative" data-bonus="'+c.m.dex+'" data-auto="'+(S.level>=7?1:0)+'" data-note="'+(S.level>=7?"Feral Instinct":"")+'" aria-label="Roll initiative">'+sg(c.m.dex)+'</button><span class="l">Initiative</span></div>'
+   +'<div class="stat"><span class="v num">'+c.speed+'</span><span class="l">Speed ft</span></div>'
+   +'<div class="stat"><span class="v num">'+sg(c.pb)+'</span><span class="l">Prof.</span></div></div>'
+   +'<div class="row" style="margin-top:10px"><label class="row small"><input type="checkbox" id="f-shield" data-act="shield"'+(S.shield?" checked":"")+'> Shield (+2 AC)</label></div>'
+   +'<p class="muted small" style="margin:6px 0 0">AC uses Unarmored Defense: 10 + Dex + Con. Armor and weapons come in the equipment step.</p></div>';
+
+  h+='<div class="panel"><h2>Hit Points</h2><div class="hp-big"><span class="cur num">'+hp+'</span><span class="max num">/ '+c.hpMax+'</span>'
+   +(S.temp>0?'<span class="pill num">+'+S.temp+' temp</span>':'')+'</div>'
+   +'<div class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>'
+   +'<div class="row"><input type="number" id="hpAmt" min="0" value="1" aria-label="Amount"><button class="btn" type="button" data-act="dmg">Damage</button><button class="btn" type="button" data-act="heal">Heal</button>'
+   +'<button class="btn" type="button" data-act="temp">+ Temp HP</button></div>'
+   +'<div class="row" style="margin-top:10px"><span class="small">Hit Dice d12: <b class="num">'+(S.level-S.hdUsed)+'</b> / '+S.level+'</span>'
+   +'<button class="btn sm" type="button" data-act="hd"'+(S.level-S.hdUsed<=0||hp>=c.hpMax?" disabled":"")+'>Spend one</button></div>'
+   +'<p class="muted small" style="margin:6px 0 0">Max HP uses the fixed average (7) per level plus Con modifier.</p></div>';
+
+  h+='<div class="panel rage-panel'+(S.raging?" on":"")+'"><h2>Rage</h2>'
+   +'<div class="row" style="justify-content:space-between"><div class="pips" role="group" aria-label="Rage uses">';
+  for(var i=0;i<c.rageMax;i++){ h+='<button type="button" class="pip'+(i>=rageLeft?" used":"")+'" data-act="pip" data-i="'+i+'" aria-label="Rage use '+(i+1)+(i>=rageLeft?" spent":" available")+'"></button>'; }
+  h+='</div><span class="small muted num">'+rageLeft+' / '+c.rageMax+' left</span></div>'
+   +'<div class="row" style="margin:12px 0 8px">'
+   +(S.raging?'<button class="btn" type="button" data-act="endrage">End Rage</button><span class="rage-state">RAGING</span>'
+             :'<button class="btn rage" type="button" data-act="rage"'+(rageLeft<=0?" disabled":"")+'>Start Rage</button>')
+   +'</div>'
+   +'<div class="kv"><span>Rage damage</span><b class="num">+'+c.rd+'</b></div>'
+   +'<div class="kv"><span>Resistance</span><b>'+(S.raging?"Bludgeoning, piercing, slashing":"While raging")+'</b></div>'
+   +(S.level>=11?'<div class="kv"><span>Relentless Rage DC</span><span class="row"><b class="num">'+(10+5*S.relentless)+'</b><button class="btn sm" type="button" data-act="relent">Used</button></span></div>':'')
+   +(S.level>=15?'<div class="kv"><span>Persistent Rage</span><button class="btn sm" type="button" data-act="persist">'+(S.persistentUsed?"Used (until Long Rest)":"Available")+'</button></div>':'')
+   +'<div class="row" style="margin-top:12px"><button class="btn sm" type="button" data-act="short">Short Rest</button><button class="btn sm" type="button" data-act="long">Long Rest</button></div></div>';
+  h+='</section>';
+
+  /* columns */
+  h+='<div class="cols"><div class="col">';
+
+  /* abilities */
+  h+='<section class="panel"><h2>Abilities</h2><div class="abil">';
+  var strAdv=S.raging?1:0;
+  ABIL.forEach(function(a){
+    var k=a[0], isSave=(k==="str"||k==="con"), sv=c.m[k]+(isSave?c.pb:0);
+    var chkAuto=(k==="str"&&S.raging)?1:0, chkNote=chkAuto?"Rage":"";
+    var saveAuto=((k==="str"&&S.raging)||(k==="dex"&&S.level>=2))?1:0;
+    var saveNote=(k==="str"&&S.raging)?"Rage":((k==="dex"&&S.level>=2)?"Danger Sense":"");
+    h+='<div class="ab"><span class="n">'+a[1].slice(0,3)+'</span>'
+     +'<button class="m num" type="button" data-act="roll" data-label="'+a[1]+' check" data-bonus="'+c.m[k]+'" data-auto="'+chkAuto+'" data-note="'+chkNote+'" aria-label="Roll '+a[1]+' check">'+sg(c.m[k])+'</button>'
+     +'<span class="s num">'+c.sc[k]+'</span>'
+     +'<button class="sv num" type="button" data-act="roll" data-label="'+a[1]+' save" data-bonus="'+sv+'" data-auto="'+saveAuto+'" data-note="'+saveNote+'" aria-label="Roll '+a[1]+' saving throw"><span class="dot'+(isSave?" p":"")+'"></span>Save '+sg(sv)+'</button></div>';
+  });
+  h+='</div>';
+  if(strAdv||S.level>=2){
+    h+='<p class="muted small" style="margin:10px 0 0">Advantage is applied automatically for Strength checks and saves while raging'+(S.level>=2?", Dexterity saves (Danger Sense)":"")+(S.level>=7?" and Initiative (Feral Instinct)":"")+'.</p>';
+  }
+  h+='</section>';
+
+  /* skills */
+  var profs=skillProfs();
+  h+='<section class="panel"><h2>Skills</h2><div class="skills">';
+  SKILLS.forEach(function(s){
+    var useStr=S.raging&&S.level>=3&&RAGE_STR_SKILLS.indexOf(s[0])>=0;
+    var ab=useStr?"str":s[2], p=profs[s[0]]?c.pb:0, b=c.m[ab]+p;
+    var auto=(ab==="str"&&S.raging)?1:0;
+    h+='<button class="sk" type="button" data-act="roll" data-label="'+s[1]+'" data-bonus="'+b+'" data-auto="'+auto+'" data-note="'+(auto?"Rage":"")+'" title="'+(profs[s[0]]?"Proficient: "+esc(profs[s[0]]):"Not proficient")+'">'
+     +'<span class="dot'+(profs[s[0]]?" p":"")+'"></span><span>'+s[1]+' <span class="a">'+ab+(useStr&&s[2]!=="str"?" (rage)":"")+(profs[s[0]]?" · "+esc(profs[s[0]]):"")+'</span></span><span class="b num">'+sg(b)+'</span></button>';
+  });
+  h+='</div><div class="passives">'
+   +'<span class="pill num">Passive Perception '+(10+c.m.wis+(profs.perception?c.pb:0))+'</span>'
+   +'<span class="pill num">Passive Insight '+(10+c.m.wis+(profs.insight?c.pb:0))+'</span>'
+   +'<span class="pill num">Passive Investigation '+(10+c.m.int)+'</span></div></section>';
+
+  /* proficiencies */
+  h+='<section class="panel"><h2>Proficiencies &amp; Traits</h2>'
+   +'<div class="kv"><span>Saving throws</span><b>Strength, Constitution</b></div>'
+   +'<div class="kv"><span>Armor</span><b>Light, Medium, Shields</b></div>'
+   +'<div class="kv"><span>Weapons</span><b>Simple, Martial</b></div>'
+   +'<div class="kv"><span>Tools</span><b>Cartographer’s Tools</b></div>'
+   +'<div class="kv"><span>Languages</span><b>Common, Elvish, Sylvan</b></div>'
+   +'<div class="group-title">Elf</div>'
+   +'<p class="small" style="margin:4px 0"><b>Darkvision 60 ft.</b> <b>Fey Ancestry:</b> advantage on saves to avoid or end the Charmed condition. <b>Keen Senses:</b> Insight proficiency. <b>Trance:</b> you don’t need sleep, magic can’t put you to sleep, and you finish a Long Rest in 4 hours of conscious meditation. Medium size, Speed 30 ft.</p>'
+   +'<div class="group-title">High Elf lineage</div>'
+   +'<p class="small" style="margin:4px 0">Prestidigitation cantrip, Detect Magic at level 3 and Misty Step at level 5. Spellcasting ability: Wisdom.</p>'
+   +'<div class="group-title">Guide (background)</div>'
+   +'<p class="small" style="margin:4px 0">Ability increases +2 Constitution and +1 Dexterity. Origin feat: Magic Initiate (Druid). Skills: Stealth, Survival.</p></section>';
+
+  h+='<section class="panel"><h2>Character</h2>'
+   +'<div class="kv"><span>Alignment</span><b>Chaotic Good</b></div>'
+   +'<div class="kv"><span>Goes by</span><b>Raica (alias)</b></div>'
+   +'<div class="kv"><span>Age</span><b>Three to four centuries</b></div>'
+   +'<div class="group-title">Appearance</div>'
+   +'<p class="small" style="margin:4px 0">A tall elf with powerful but lean shoulders and back. Blond hair, often kept in a dirty, tangled knot. A short blond beard on a face marked by many scars, one of which pulls at the corner of his mouth. He is still strikingly handsome despite the marks, but he looks after himself badly, and his skin is often an unhealthy color from hangovers.</p>'
+   +'<div class="group-title">How he rages</div>'
+   +'<p class="small" style="margin:4px 0">Not a blind fury but absolute concentration. Every sense sharpens, and his latent potential, long years of training, battles and near-death experiences converge until he becomes a weapon of war.</p>'
+   +'<div class="group-title">Backstory</div>'
+   +'<p class="small" style="margin:4px 0">Raica lost his whole people and has lived for centuries in many realms, watching the people he loved vanish one after another. Last of all he joined the Order of the Vesper Owls. He knows exactly what the Order fought, and believes the threat is finished for good. He alone survived, scarred in body and spirit. His elven constitution closed wounds that should have been fatal, but each one left a mark. He has drunk ever since to numb the grief and a life that keeps taking every bond he builds.</p>'
+   +'<div class="group-title">The Order of the Vesper Owls</div>'
+   +'<p class="small" style="margin:4px 0">A legendary order of knights who served an international cause across many realms, seated as equals at a Round Hall. Motto: <i>Vigilia sine fine</i>. Its heart was the lost principality of Valdrenne. Many people know the Order existed, as with the knights of a famous round table. Only scholars know its symbols, the names of its last generation and the threat it fell against.</p>'
+   +'<p class="small" style="margin:4px 0"><b>Secret:</b> Raica’s real name is on that last roll. Whoever knows the owl and hears the name learns he is the last survivor, which is why he hides it from the party.</p>'
+   +'<div class="group-title">Owl pendant</div>'
+   +'<p class="small" style="margin:4px 0">Tarnished silver: an owl in flight above a broken circle, the Round Hall. He has worn it since his knighthood.</p>'
+   +'<div class="group-title">Ideal</div>'
+   +'<p class="small" style="margin:4px 0">He tries to do good however much the world and life have hurt and disappointed him. After all he has lived, he recognizes no law or bureaucracy as his own.</p>'
+   +'<div class="group-title">Bonds</div>'
+   +'<p class="small" style="margin:4px 0"><b>The pendant:</b> proof that the Order and his fallen companions existed. <b>The root-bound skein:</b> he carried it out of another plane and has never learned to use it. <b>The party:</b> a belonging he did not want and keeps trying not to feel, because every past bond ended in loss.</p>'
+   +'<div class="group-title">Flaw</div>'
+   +'<p class="small" style="margin:4px 0">Drinks to numb grief, and sometimes to wear himself down.</p></section>';
+
+  h+='</div><div class="col">';
+
+  /* choices */
+  h+='<section class="panel"><h2>Level '+S.level+' choices</h2>';
+  var anyChoice=false;
+  var newF=CLASS_FEATS.concat(TREE_FEATS).filter(function(f){return f.l===S.level;});
+  if(newF.length){ h+='<p class="small" style="margin:0 0 4px"><b>New at this level:</b> '+newF.map(function(f){return esc(f.n);}).join(", ")+'.</p>'; }
+  if(S.level>=3){
+    anyChoice=true;
+    var opts=BARB_SKILLS.filter(function(k){return !BASE_PROF[k];});
+    var done=!!S.extraSkill;
+    h+='<div class="choice'+(done?"":" pending")+'"><div class="t"><h3>Primal Knowledge (level 3)</h3><span class="flag'+(done?" done":"")+'">'+(done?"Chosen":"Pending")+'</span></div>'
+     +'<select id="f-extraSkill" data-field="extraSkill" aria-label="Extra Barbarian skill"><option value="">Choose one more Barbarian skill</option>'
+     +opts.map(function(k){var nm=SKILLS.filter(function(s){return s[0]===k;})[0][1];return '<option value="'+k+'"'+(S.extraSkill===k?" selected":"")+'>'+nm+'</option>';}).join("")
+     +'</select></div>';
+  }
+  ASI_LEVELS.forEach(function(L){
+    if(S.level<L) return; anyChoice=true;
+    var cc=S.asi[L]||{mode:"",a:"",b:"",feat:""}, ok=cc.mode==="feat"?!!cc.feat:(cc.mode==="plus2"?!!cc.a:(cc.mode==="plus1"?!!cc.a&&!!cc.b&&cc.a!==cc.b:false));
+    var ab=function(sel,key){return '<select id="f-asi'+L+key+'" data-asi="'+L+'" data-key="'+key+'" aria-label="Ability">'+'<option value="">Ability</option>'+ABIL.map(function(a){return '<option value="'+a[0]+'"'+(sel===a[0]?" selected":"")+'>'+a[1]+'</option>';}).join("")+'</select>';};
+    h+='<div class="choice'+(ok?"":" pending")+'"><div class="t"><h3>Ability Score Improvement (level '+L+')</h3><span class="flag'+(ok?" done":"")+'">'+(ok?"Chosen":"Pending")+'</span></div>'
+     +'<select id="f-asi'+L+'mode" data-asi="'+L+'" data-key="mode" aria-label="Improvement type"><option value="">Choose</option>'
+     +'<option value="plus2"'+(cc.mode==="plus2"?" selected":"")+'>+2 to one ability</option>'
+     +'<option value="plus1"'+(cc.mode==="plus1"?" selected":"")+'>+1 to two abilities</option>'
+     +'<option value="feat"'+(cc.mode==="feat"?" selected":"")+'>Take a feat</option></select>'
+     +(cc.mode==="plus2"?'<div class="sel-row">'+ab(cc.a,"a")+'</div>':"")
+     +(cc.mode==="plus1"?'<div class="sel-row">'+ab(cc.a,"a")+ab(cc.b,"b")+'</div>':"")
+     +(cc.mode==="feat"?'<div class="sel-row"><input type="text" id="f-asi'+L+'feat" data-asi="'+L+'" data-key="feat" placeholder="Feat name" value="'+esc(cc.feat)+'"></div>':"")
+     +'</div>';
+  });
+  if(S.level>=19){
+    anyChoice=true;
+    h+='<div class="choice'+(S.epicBoon?"":" pending")+'"><div class="t"><h3>Epic Boon (level 19)</h3><span class="flag'+(S.epicBoon?" done":"")+'">'+(S.epicBoon?"Chosen":"Pending")+'</span></div>'
+     +'<input type="text" id="f-epicBoon" data-field="epicBoon" placeholder="Epic Boon feat" value="'+esc(S.epicBoon)+'"></div>';
+  }
+  var mn=c.mn, mh='';
+  for(var q=0;q<mn;q++){ mh+='<input type="text" id="f-mastery'+q+'" data-field="mastery.'+q+'" placeholder="Weapon '+(q+1)+'" value="'+esc(S.mastery[q])+'" aria-label="Weapon mastery '+(q+1)+'">'; }
+  var mFilled=S.mastery.slice(0,mn).filter(Boolean).length;
+  h+='<div class="choice'+(mFilled<mn?" pending":"")+'"><div class="t"><h3>Weapon Mastery ('+mn+' weapons)</h3><span class="flag'+(mFilled>=mn?" done":"")+'">'+(mFilled>=mn?"Chosen":"Pending")+'</span></div><div class="mastery">'+mh+'</div></div>';
+  h+='</section>';
+
+  /* attacks + heirloom */
+  var hb=S.level>=13?2:(S.level>=5?1:0), atk=c.m.str+c.pb+hb, dflat=c.m.str+hb+(S.raging?c.rd:0);
+  var uAtk=c.m.str+c.pb, uDmg=1+c.m.str+(S.raging?c.rd:0);
+  var sapUsed=!!S.spellUsed.sap, splUsed=!!S.spellUsed.splinter;
+  h+='<section class="panel"><h2>Attacks</h2>'
+   +'<div class="kv"><span><b>Root-bound Greataxe</b><br><span class="small muted">1d12 slashing · Heavy, Two-Handed · mastery Cleave'+(S.level>=3?" · magical":"")+(hb?" · +"+hb+" heirloom":"")+'</span></span>'
+   +'<span class="row"><button class="btn sm num" type="button" data-act="roll" data-label="Greataxe attack" data-bonus="'+atk+'" data-auto="0" data-note="">Hit '+sg(atk)+'</button>'
+   +'<button class="btn sm num" type="button" data-act="dmgroll" data-label="Greataxe damage" data-n="1" data-sides="12" data-flat="'+dflat+'">1d12 '+sg(dflat)+'</button></span></div>'
+   +'<div class="kv"><span><b>Unarmed Strike</b><br><span class="small muted">Bludgeoning</span></span>'
+   +'<span class="row"><button class="btn sm num" type="button" data-act="roll" data-label="Unarmed attack" data-bonus="'+uAtk+'" data-auto="0" data-note="">Hit '+sg(uAtk)+'</button>'
+   +'<span class="pill num">Damage '+uDmg+'</span></span></div>'
+   +'<p class="small muted" style="margin:8px 0 0">'+(S.level>=5?"Extra Attack: two attacks per Attack action. ":"")+'Rage damage ('+sg(c.rd)+') is added while raging. Reckless Attack: set Adv. in the dock. Cleave: on a hit, one more attack against a second creature within 5 ft of the first, without your ability modifier on damage, once per turn.</p></section>';
+
+  h+='<section class="panel"><h2>Heirloom: root-bound skein</h2>'
+   +'<p class="small muted" style="margin:0 0 6px">A dormant relic from another plane. It uses Greataxe rules; its powers wake as Raica grows. Proposed with the DM.</p>'
+   +((S.level>=7||S.level>=9)?'<div class="row" style="margin-bottom:8px">'
+     +(S.level>=7?'<button class="btn sm" type="button" data-act="spell" data-k="sap">Weeping Sap: '+(sapUsed?"Used":"Available")+' ('+(S.level>=13?"Short or Long Rest":"Long Rest")+')</button>':"")
+     +(S.level>=9?'<button class="btn sm" type="button" data-act="spell" data-k="splinter">Splintering Strike: '+(splUsed?"Used":"Available")+' (per Rage)</button><button class="btn sm num" type="button" data-act="dmgroll" data-label="Splintering Strike (force)" data-n="2" data-sides="6" data-flat="0">2d6 force</button>':"")
+     +'</div>':"")
+   +featList(HEIR)+'</section>';
+
+  /* features */
+  h+='<section class="panel"><h2>Features</h2>';
+  function featList(list){
+    return list.map(function(f){
+      var on=S.level>=f.l, isNew=f.l===S.level;
+      return '<details class="feat'+(on?"":" locked")+(isNew?" new":"")+'"><summary><b>'+esc(f.n)+'</b><span class="lv">'+(on?"Level "+f.l:"Unlocks at "+f.l)+'</span></summary><div class="body">'+esc(f.t(c))+'</div></details>';
+    }).join("");
+  }
+  h+='<div class="group-title">Barbarian</div>'+featList(CLASS_FEATS)
+   +'<div class="group-title">Path of the World Tree</div>'+featList(TREE_FEATS)+'</section>';
+
+  /* spells */
+  var dc=8+c.pb+c.spellMod, atk=c.pb+c.spellMod;
+  h+='<section class="panel"><h2>Spellcasting (Wisdom)</h2>'
+   +'<div class="row" style="margin-bottom:8px"><span class="pill num">Spell save DC '+dc+'</span><span class="pill num">Spell attack '+sg(atk)+'</span></div>'
+   +(S.raging?'<div class="notice rage">You can’t cast spells or maintain Concentration while raging.</div>':'')
+   +SPELLS.map(function(sp){
+      var on=S.level>=sp.l, used=!!S.spellUsed[sp.k];
+      return '<div class="spell'+(on?"":" locked")+'"><div class="t"><b>'+sp.n+'</b> <span class="muted small">'+sp.tag+'</span></div>'
+       +(sp.use&&on?'<button class="btn sm" type="button" data-act="spell" data-k="'+sp.k+'">'+(used?"Used":"Available")+'</button>':'<span class="muted small">'+(on?"":"Locked")+'</span>')
+       +'<div class="small" style="grid-column:1 / -1">'+esc(sp.t)+'</div></div>';
+    }).join("")+'</section>';
+
+  /* gear + notes */
+  h+='<section class="panel"><h2>Equipment</h2><textarea id="f-equipment" data-field="equipment" placeholder="Weapons, armor, pack, coins. We fill this in at the equipment step." aria-label="Equipment">'+esc(S.equipment)+'</textarea></section>';
+  h+='<section class="panel"><h2>Session notes</h2><textarea id="f-notes" data-field="notes" placeholder="People met, debts, open questions." aria-label="Session notes">'+esc(S.notes)+'</textarea></section>';
+
+  h+='<section class="panel"><h2>Backup &amp; transfer</h2><p class="small muted" style="margin:0 0 8px">Data is stored in this browser. To move it to another device, copy it here and paste it there.</p>'
+   +'<textarea id="backupBox" style="min-height:70px" placeholder="Paste saved data here, then press Load." aria-label="Backup data"></textarea>'
+   +'<div class="row" style="margin-top:8px"><button class="btn sm" type="button" data-act="export">Copy my data</button><button class="btn sm" type="button" data-act="import">Load pasted data</button><span class="small muted" id="backupMsg"></span></div></section>';
+
+  h+='</div></div>';
+  document.getElementById("app").innerHTML=h;
+  updateDock();
+}
+
+/* ---------- Actions ---------- */
+function act(el){
+  var a=el.getAttribute("data-act"), c=ctx(), changed=true;
+  if(a==="lvl"){ var nl=Math.min(20,Math.max(1,S.level+parseInt(el.getAttribute("data-v"),10))); if(nl===S.level) return; S.level=nl; if(S.rageUsed>RAGES[nl-1]) S.rageUsed=RAGES[nl-1]; if(nl<11) S.relentless=0; }
+  else if(a==="roll"){ roll(el.getAttribute("data-label"),parseInt(el.getAttribute("data-bonus"),10),el.getAttribute("data-auto")==="1",el.getAttribute("data-note")); return; }
+  else if(a==="export"){
+    var box=document.getElementById("backupBox"), msg=document.getElementById("backupMsg"), txt=JSON.stringify(plain());
+    box.value=txt;
+    var ok=function(){msg.textContent="Copied.";}, fb=function(){box.focus();box.select();msg.textContent="Select and copy the text above.";};
+    try{ navigator.clipboard.writeText(txt).then(ok,fb); }catch(e){ fb(); }
+    return;
+  }
+  else if(a==="import"){
+    var box2=document.getElementById("backupBox"), msg2=document.getElementById("backupMsg");
+    try{ var parsed=JSON.parse(box2.value); if(!parsed||typeof parsed!=="object"||parsed.v!==1) throw new Error("bad"); S=merge(parsed); }
+    catch(e){ msg2.textContent="That text is not valid sheet data."; return; }
+  }
+  else if(a==="mode"){ S.rollMode=el.getAttribute("data-v"); }
+  else if(a==="dmgroll"){ rollDice(el.getAttribute("data-label"),parseInt(el.getAttribute("data-n"),10),parseInt(el.getAttribute("data-sides"),10),parseInt(el.getAttribute("data-flat"),10)); return; }
+  else if(a==="rage"){ if(c.rageMax-S.rageUsed<=0) return; S.rageUsed++; S.raging=true; S.spellUsed.splinter=false; if(S.level>=3) S.temp=Math.max(S.temp,S.level); }
+  else if(a==="endrage"){ S.raging=false; }
+  else if(a==="pip"){ var i=parseInt(el.getAttribute("data-i"),10), left=c.rageMax-S.rageUsed; S.rageUsed=(i<left)?(c.rageMax-i):(c.rageMax-i-1); S.rageUsed=Math.max(0,Math.min(c.rageMax,S.rageUsed)); }
+  else if(a==="dmg"||a==="heal"||a==="temp"){
+    var amt=Math.max(0,parseInt(document.getElementById("hpAmt").value,10)||0); if(!amt) return;
+    var hp=curHp(c);
+    if(a==="dmg"){ var rest=amt; if(S.temp>0){var t=Math.min(S.temp,rest);S.temp-=t;rest-=t;} S.hp=Math.max(0,hp-rest); }
+    else if(a==="heal"){ S.hp=Math.min(c.hpMax,hp+amt); }
+    else { S.temp=Math.max(S.temp,amt); }
+  }
+  else if(a==="hd"){ if(S.level-S.hdUsed<=0) return; var gain=healRoll(c); S.hdUsed++; S.hp=Math.min(c.hpMax,curHp(c)+gain); }
+  else if(a==="short"){ S.rageUsed=Math.max(0,S.rageUsed-1); S.relentless=0; S.raging=false; if(S.level>=13) S.spellUsed.sap=false; }
+  else if(a==="long"){ S.rageUsed=0; S.hp=null; S.temp=0; S.raging=false; S.relentless=0; S.persistentUsed=false; S.spellUsed={}; S.hdUsed=Math.max(0,S.hdUsed-Math.max(1,Math.floor(S.level/2))); }
+  else if(a==="relent"){ S.relentless++; }
+  else if(a==="persist"){ if(!S.persistentUsed){ S.persistentUsed=true; S.rageUsed=0; } else { S.persistentUsed=false; } }
+  else if(a==="spell"){ var k=el.getAttribute("data-k"); S.spellUsed[k]=!S.spellUsed[k]; }
+  else if(a==="shield"){ S.shield=el.checked; }
+  else changed=false;
+  if(changed){ render(); scheduleSave(); }
+}
+document.addEventListener("click",function(e){
+  var el=e.target.closest("[data-act]"); if(!el||el.tagName==="INPUT") return;
+  act(el);
+});
+document.addEventListener("change",function(e){
+  var el=e.target;
+  if(el.getAttribute("data-act")==="shield"){ act(el); return; }
+  if(el.hasAttribute("data-asi")){
+    var L=el.getAttribute("data-asi"), key=el.getAttribute("data-key");
+    var cc=S.asi[L]||(S.asi[L]={mode:"",a:"",b:"",feat:""});
+    cc[key]=el.value;
+    if(key==="mode"&&el.value!==cc.prevMode){ }
+    render(); scheduleSave(); return;
+  }
+  if(el.hasAttribute("data-field")&&el.tagName==="SELECT"){ S[el.getAttribute("data-field")]=el.value; render(); scheduleSave(); }
+});
+document.addEventListener("input",function(e){
+  var el=e.target;
+  if(el.hasAttribute("data-asi")&&el.tagName==="INPUT"){
+    var L=el.getAttribute("data-asi"), cc=S.asi[L]||(S.asi[L]={mode:"feat",a:"",b:"",feat:""});
+    cc.feat=el.value; scheduleSave(); return;
+  }
+  var f=el.getAttribute("data-field"); if(!f||el.tagName==="SELECT") return;
+  if(f.indexOf("mastery.")===0){ S.mastery[parseInt(f.split(".")[1],10)]=el.value; }
+  else S[f]=el.value;
+  scheduleSave();
+});
+
+boot();
+})();
+</script>
+</html>
