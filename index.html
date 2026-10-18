@@ -235,6 +235,46 @@ var HEIR=[
  {l:13,n:"Deep Roots",t:function(){return "The bonus becomes +2, and Weeping Sap also recharges on a Short Rest.";}},
  {l:17,n:"Unbound",t:function(){return "The roots unwind completely. Final powers are set with the DM.";}}
 ];
+var MASTERY_INFO={
+ greataxe:["Cleave","On a hit, make one more attack against a second creature within 5 ft of the first, without your ability modifier on damage. Once per turn."],
+ warhammer:["Push","On a hit, push a Large or smaller target up to 10 ft straight away from you."],
+ mace:["Sap","On a hit, the target has disadvantage on its next attack roll before the start of your next turn."],
+ handaxe:["Vex","On a hit, you have advantage on your next attack roll against that creature before the end of your next turn."],
+ greatsword:["Graze","On a miss, the target still takes damage equal to your ability modifier."],
+ battleaxe:["Topple","On a hit, the target makes a Constitution save or falls Prone."],
+ javelin:["Slow","On a hit, the target loses 10 ft of Speed until the start of your next turn."],
+ glaive:["Graze","On a miss, the target still takes damage equal to your ability modifier."],
+ longsword:["Sap","On a hit, the target has disadvantage on its next attack roll before the start of your next turn."]
+};
+var WIZARD_CANTRIPS=["Acid Splash","Chill Touch","Dancing Lights","Elementalism","Fire Bolt","Light","Mage Hand","Mending","Message","Mind Sliver","Minor Illusion","Poison Spray","Prestidigitation","Ray of Frost","Shocking Grasp","Thunderclap","Toll the Dead","True Strike"];
+var CANTRIP_INFO={
+ "acid splash":"Within 60 ft, one creature (or two within 5 ft of each other) makes a Dexterity save or takes 1d6 acid damage.",
+ "chill touch":"Ranged spell attack within 120 ft: 1d10 necrotic damage, and the target can’t regain HP until the start of your next turn.",
+ "dancing lights":"Concentration, up to 1 minute: four torch-like lights within 120 ft that you can move.",
+ "elementalism":"Minor elemental tricks within 30 ft: a gust of air, a spark of flame, a tremor, or a splash of water.",
+ "fire bolt":"Ranged spell attack within 120 ft: 1d10 fire damage. Ignites unattended flammable objects.",
+ "light":"Touch an object: it sheds bright light for 20 ft and dim light for 20 ft more, for 1 hour.",
+ "mage hand":"A spectral hand within 30 ft that handles objects up to 10 lb, for 1 minute.",
+ "mending":"Touch: repairs a single break or tear in an object.",
+ "message":"Whisper to a creature within 120 ft; only it hears you and can reply.",
+ "mind sliver":"Within 60 ft, Intelligence save or 1d6 psychic damage and −1d4 on its next save.",
+ "minor illusion":"A sound or the image of an object within 30 ft, for 1 minute.",
+ "poison spray":"Within 30 ft, Constitution save or 1d12 poison damage.",
+ "prestidigitation":"Minor magic tricks: a harmless sensory effect, light or snuff a small flame, clean or soil an object, chill, warm or flavor, a small mark, or a trinket or illusion for an hour.",
+ "ray of frost":"Ranged spell attack within 60 ft: 1d8 cold damage and the target loses 10 ft Speed until the start of your next turn.",
+ "shocking grasp":"Touch spell attack, with advantage if the target wears metal armor: 1d8 lightning damage, and it can’t take reactions until the start of its next turn.",
+ "thunderclap":"Creatures within 5 ft of you make a Constitution save or take 1d6 thunder damage. The sound carries 100 ft.",
+ "druidcraft":"Minor nature effects: predict weather, make a bloom open, create a harmless sensory effect, or light or snuff a small flame.",
+ "guidance":"Touch, Concentration up to 1 minute: the target adds 1d4 to one ability check of its choice.",
+ "produce flame":"A flame in your hand sheds light for 10 minutes; you can hurl it as a ranged spell attack within 60 ft for 1d8 fire damage.",
+ "shillelagh":"Bonus Action: a club or quarterstaff uses your spellcasting ability for attacks and damage for 1 minute.",
+ "spare the dying":"Touch: a creature at 0 HP becomes stable.",
+ "starry wisp":"Ranged spell attack within 60 ft: 1d8 radiant damage, and the target sheds light so it can’t benefit from being unseen.",
+ "thorn whip":"Melee spell attack within 30 ft: 1d6 piercing damage, and you can pull a Large or smaller creature up to 10 ft toward you.",
+ "toll the dead":"Within 60 ft, Wisdom save or 1d8 necrotic damage (d12 if the target is missing HP).",
+ "true strike":"Make one attack with a weapon you are proficient with, using your spellcasting ability for the attack and damage; the damage can be radiant."
+};
+var DRUID_CANTRIPS=["Druidcraft","Elementalism","Guidance","Mending","Message","Poison Spray","Produce Flame","Shillelagh","Spare the Dying","Starry Wisp","Thorn Whip","Thunderclap"];
 var SPELLS=[
  {k:"presti",n:"Prestidigitation",tag:"Cantrip · High Elf",l:1,use:false,t:"Minor magic tricks: a harmless sensory effect, light or snuff a small flame, clean or soil an object, chill, warm or flavor, a small mark, or a trinket or illusion for an hour. After a Long Rest you may swap it for another Wizard cantrip."},
  {k:"guidance",n:"Guidance",tag:"Cantrip · Magic Initiate (Druid)",l:1,use:false,t:"Touch, Concentration up to 1 minute. The target adds 1d4 to one ability check of its choice."},
@@ -246,8 +286,8 @@ var SPELLS=[
 
 /* ---------- State ---------- */
 var DEFAULT_EQUIP="Root-bound skein (Greataxe stats, see Heirloom)\nOwl pendant of the Order of the Vesper Owls\nEmpty flask\nWorn traveling clothes\n0 GP";
-function defaults(){return {v:1,name:"Raica",level:1,hp:null,temp:0,rageUsed:0,raging:false,hdUsed:0,relentless:0,persistentUsed:false,shield:false,
-  extraSkill:"",asi:{},epicBoon:"",mastery:["Greataxe","","",""],equipment:DEFAULT_EQUIP,notes:"",spellUsed:{},rollMode:"normal"};}
+function defaults(){return {v:3,elfCantrip:"Minor Illusion",miCantrips:["Guidance","Thunderclap"],name:"Raica",level:1,hp:null,temp:0,rageUsed:0,raging:false,hdUsed:0,relentless:0,persistentUsed:false,shield:false,
+  extraSkill:"",asi:{},epicBoon:"",mastery:["Greataxe","Warhammer","",""],equipment:DEFAULT_EQUIP,notes:"",spellUsed:{},rollMode:"normal"};}
 var S=defaults();
 var statusText="Loading…";
 var lastRoll=null;
@@ -282,13 +322,19 @@ function curHp(c){return S.hp==null?c.hpMax:Math.min(S.hp,c.hpMax);}
 var db=null, docRef=null, saving=false, dirty=false, timer=null, loaded=false;
 function plain(){var o=JSON.parse(JSON.stringify(S));return o;}
 function merge(d){
-  var base=defaults(), k;
+  var base=defaults(), k, oldV=(d&&parseInt(d.v,10))||1;
   for(k in base){ if(d&&d[k]!==undefined) base[k]=d[k]; }
+  base.v=3;
+  if(!base.elfCantrip) base.elfCantrip="Minor Illusion";
+  if(oldV<3&&base.elfCantrip==="Prestidigitation") base.elfCantrip="Minor Illusion";
+  if(!Array.isArray(base.miCantrips)||base.miCantrips.length<2) base.miCantrips=["Guidance","Thunderclap"];
   base.level=Math.min(20,Math.max(1,parseInt(base.level,10)||1));
   if(!base.name) base.name="Raica";
   if(!base.equipment) base.equipment=DEFAULT_EQUIP;
   if(!Array.isArray(base.mastery)) base.mastery=["","","",""];
   while(base.mastery.length<4) base.mastery.push("");
+  if(!base.mastery[0]) base.mastery[0]="Greataxe";
+  if(oldV<2&&!base.mastery[1]) base.mastery[1]="Warhammer";
   if(!base.asi||typeof base.asi!=="object") base.asi={};
   if(!base.spellUsed||typeof base.spellUsed!=="object") base.spellUsed={};
   return base;
@@ -467,7 +513,7 @@ function render(){
    +'<div class="group-title">Elf</div>'
    +'<p class="small" style="margin:4px 0"><b>Darkvision 60 ft.</b> <b>Fey Ancestry:</b> advantage on saves to avoid or end the Charmed condition. <b>Keen Senses:</b> Insight proficiency. <b>Trance:</b> you don’t need sleep, magic can’t put you to sleep, and you finish a Long Rest in 4 hours of conscious meditation. Medium size, Speed 30 ft.</p>'
    +'<div class="group-title">High Elf lineage</div>'
-   +'<p class="small" style="margin:4px 0">Prestidigitation cantrip, Detect Magic at level 3 and Misty Step at level 5. Spellcasting ability: Wisdom.</p>'
+   +'<p class="small" style="margin:4px 0">A Wizard cantrip (currently '+esc(S.elfCantrip||"Minor Illusion")+', swappable after each Long Rest), Detect Magic at level 3 and Misty Step at level 5. Spellcasting ability: Wisdom.</p>'
    +'<div class="group-title">Guide (background)</div>'
    +'<p class="small" style="margin:4px 0">Ability increases +2 Constitution and +1 Dexterity. Origin feat: Magic Initiate (Druid). Skills: Stealth, Survival.</p></section>';
 
@@ -531,7 +577,8 @@ function render(){
   var mn=c.mn, mh='';
   for(var q=0;q<mn;q++){ mh+='<input type="text" id="f-mastery'+q+'" data-field="mastery.'+q+'" placeholder="Weapon '+(q+1)+'" value="'+esc(S.mastery[q])+'" aria-label="Weapon mastery '+(q+1)+'">'; }
   var mFilled=S.mastery.slice(0,mn).filter(Boolean).length;
-  h+='<div class="choice'+(mFilled<mn?" pending":"")+'"><div class="t"><h3>Weapon Mastery ('+mn+' weapons)</h3><span class="flag'+(mFilled>=mn?" done":"")+'">'+(mFilled>=mn?"Chosen":"Pending")+'</span></div><div class="mastery">'+mh+'</div></div>';
+  h+='<div class="choice'+(mFilled<mn?" pending":"")+'"><div class="t"><h3>Weapon Mastery ('+mn+' weapons)</h3><span class="flag'+(mFilled>=mn?" done":"")+'">'+(mFilled>=mn?"Chosen":"Pending")+'</span></div><div class="mastery">'+mh+'</div>'
+   +S.mastery.slice(0,mn).map(function(w){var i=MASTERY_INFO[String(w).trim().toLowerCase()];return i?'<p class="small muted" style="margin:0"><b>'+esc(w)+' – '+i[0]+':</b> '+esc(i[1])+'</p>':"";}).join("")+'</div>';
   h+='</section>';
 
   /* attacks + heirloom */
@@ -573,6 +620,23 @@ function render(){
    +(S.raging?'<div class="notice rage">You can’t cast spells or maintain Concentration while raging.</div>':'')
    +SPELLS.map(function(sp){
       var on=S.level>=sp.l, used=!!S.spellUsed[sp.k];
+      if(sp.k==="presti"){
+        var cn=String(S.elfCantrip||"Prestidigitation"), ci=CANTRIP_INFO[cn.trim().toLowerCase()];
+        return '<div class="spell"><div class="t"><b>'+esc(cn)+'</b> <span class="muted small">Cantrip · High Elf</span></div><span></span>'
+          +'<div class="small" style="grid-column:1 / -1">'+esc(ci||"Check this cantrip in the Player’s Handbook.")+'</div>'
+          +(S.miCantrips.some(function(x){return String(x).trim().toLowerCase()===cn.trim().toLowerCase();})?'<div class="notice" style="grid-column:1 / -1;margin:4px 0 0">You already know this cantrip through Magic Initiate. Pick a different one.</div>':"")
+          +'<div class="sel-row" style="grid-column:1 / -1;margin-top:4px"><input type="text" id="f-elfCantrip" data-field="elfCantrip" list="wizardCantrips" value="'+esc(cn)+'" aria-label="High Elf cantrip" placeholder="Wizard cantrip">'
+          +'<datalist id="wizardCantrips">'+WIZARD_CANTRIPS.map(function(n){return '<option value="'+n+'"></option>';}).join("")+'</datalist></div>'
+          +'<div class="muted small" style="grid-column:1 / -1">After each Long Rest you may swap this for another cantrip from the Wizard spell list. Wisdom is the spellcasting ability.</div></div>';
+      }
+      if(sp.k==="guidance"||sp.k==="thunderclap"){
+        var mi=sp.k==="guidance"?0:1, mn2=String(S.miCantrips[mi]||sp.n), mi2=CANTRIP_INFO[mn2.trim().toLowerCase()];
+        return '<div class="spell"><div class="t"><b>'+esc(mn2)+'</b> <span class="muted small">Cantrip · Magic Initiate (Druid)</span></div><span></span>'
+          +'<div class="small" style="grid-column:1 / -1">'+esc(mi2||"Check this cantrip in the Player’s Handbook.")+'</div>'
+          +'<div class="sel-row" style="grid-column:1 / -1;margin-top:4px"><input type="text" id="f-mi'+mi+'" data-field="miCantrips.'+mi+'" list="druidCantrips" value="'+esc(mn2)+'" aria-label="Magic Initiate cantrip '+(mi+1)+'" placeholder="Druid cantrip">'
+          +(mi===0?'<datalist id="druidCantrips">'+DRUID_CANTRIPS.map(function(n){return '<option value="'+n+'"></option>';}).join("")+'</datalist>':"")+'</div>'
+          +'<div class="muted small" style="grid-column:1 / -1">Wisdom is the spellcasting ability. Whenever you gain a level you can swap one Magic Initiate spell for another of the same level from the Druid list (not every Long Rest).</div></div>';
+      }
       return '<div class="spell'+(on?"":" locked")+'"><div class="t"><b>'+sp.n+'</b> <span class="muted small">'+sp.tag+'</span></div>'
        +(sp.use&&on?'<button class="btn sm" type="button" data-act="spell" data-k="'+sp.k+'">'+(used?"Used":"Available")+'</button>':'<span class="muted small">'+(on?"":"Locked")+'</span>')
        +'<div class="small" style="grid-column:1 / -1">'+esc(sp.t)+'</div></div>';
@@ -605,7 +669,7 @@ function act(el){
   }
   else if(a==="import"){
     var box2=document.getElementById("backupBox"), msg2=document.getElementById("backupMsg");
-    try{ var parsed=JSON.parse(box2.value); if(!parsed||typeof parsed!=="object"||parsed.v!==1) throw new Error("bad"); S=merge(parsed); }
+    try{ var parsed=JSON.parse(box2.value); if(!parsed||typeof parsed!=="object"||!(parsed.v>=1)) throw new Error("bad"); S=merge(parsed); }
     catch(e){ msg2.textContent="That text is not valid sheet data."; return; }
   }
   else if(a==="mode"){ S.rollMode=el.getAttribute("data-v"); }
@@ -644,7 +708,9 @@ document.addEventListener("change",function(e){
     if(key==="mode"&&el.value!==cc.prevMode){ }
     render(); scheduleSave(); return;
   }
-  if(el.hasAttribute("data-field")&&el.tagName==="SELECT"){ S[el.getAttribute("data-field")]=el.value; render(); scheduleSave(); }
+  if(el.hasAttribute("data-field")&&(el.tagName==="SELECT"||el.id==="f-elfCantrip"||/^f-mi[01]$/.test(el.id))){
+    var fld=el.getAttribute("data-field"); if(fld.indexOf(".")<0) S[fld]=el.value; render(); scheduleSave();
+  }
 });
 document.addEventListener("input",function(e){
   var el=e.target;
@@ -654,6 +720,7 @@ document.addEventListener("input",function(e){
   }
   var f=el.getAttribute("data-field"); if(!f||el.tagName==="SELECT") return;
   if(f.indexOf("mastery.")===0){ S.mastery[parseInt(f.split(".")[1],10)]=el.value; }
+  else if(f.indexOf("miCantrips.")===0){ S.miCantrips[parseInt(f.split(".")[1],10)]=el.value; }
   else S[f]=el.value;
   scheduleSave();
 });
